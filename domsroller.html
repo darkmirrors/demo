@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="gb2312" />
+<title>测试</title>
+<meta name="description" content="" />
+<meta name="keywords" content="" />
+<meta name="author" content="darkmirrors_gz _gz" />
+<style type="text/css">
+*{padding:0;margin:0;}
+html{overflow:visible;}
+body{height:100%;overflow:hidden;}
+.wraper{text-align:left;}
+.area{width:100%;height:600px;background-position:center center;background-repeat:no-repeat;}
+.control{position:fixed;right:10px;top:50%;margin-top:-75px;_position:absolute;_top:expression(documentElement.scrollTop + (documentElement.clientHeight - this.clientHeight) / 2  + "px");_margin-top:0;}
+.control .pull-middle{position:relative;top:-50%;}
+.control .item{width:20px;height:20px;margin-top:5px;display:block;background-color:#000;border-radius:10px;}
+.control .current{background-color:#f60;}
+</style>
+<!--[if IE 6]><script>document.execCommand("BackgroundImageCache", false, true)</script><![endif]-->
+</head>
+
+<body>
+    <div id="Jwheel">
+        <div class="area" style="background-image:url('http://dummyimage.com/1000x600/f1f1f1/999')"></div>
+        <div class="area" style="background-image:url('http://dummyimage.com/1000x600/f1f1f1/000')"></div>
+        <div class="area" style="height:400px;background-image:url('http://dummyimage.com/1000x400/f1f1f1/333')"></div>
+        <div class="area" style="background-image:url('http://dummyimage.com/1000x600/f1f1f1/666')"></div>
+        <div class="area" style="background-image:url('http://dummyimage.com/1000x600/f1f1f1/999')"></div>
+        <div class="area" style="background-image:url('http://dummyimage.com/1000x600/f1f1f1/999')"></div>
+        <div class="area" style="height:100px;background-image:url('http://dummyimage.com/1000x100/f1f1f1/fff')" noResize="true"></div>
+    </div>
+    <div class="control" id="control">
+        <div class="pull-middle">
+            <i class="item"></i>
+            <i class="item"></i>
+            <i class="item"></i>
+            <i class="item"></i>
+            <i class="item"></i>
+            <i class="item"></i>
+            <i class="item"></i>
+        </div>
+    </div>
+    
+    <script type="text/javascript">
+        (function(){
+            var config = {
+                target : null,
+                control : null,
+                duration : 200,
+                speed : 10
+            }
+
+            function DomScroller(c){
+                for(var key in c){
+                    config[key] = c[key];
+                }
+
+                this.config = config;
+
+                this.init();
+            }
+
+            DomScroller.prototype = {
+                addEvent : function(obj,type,fn){
+                    if(window.attachEvent){
+                        obj.attachEvent('on' + type,fn);
+                    }else{
+                        obj.addEventListener(type,fn,false);
+                    }
+                },
+                init : function(){
+                    document.body.scrollTop = 0;
+                    document.documentElement.scrollTop = 0;
+
+                    this.curPage = 0;
+                    this.animated = true;
+
+                    this.bind();
+                    this.changeInd();
+                },
+                bind : function(){
+                    var c = this.config,
+                        that = this;
+
+                    function initSize(){
+                        that.scrollHeight = document.documentElement.clientHeight;
+                        for (var i = 0; i < c.target.length; i++) {
+                            if(c.target[i].getAttribute('noResize') != 'true'){
+                                c.target[i].style.height = that.scrollHeight + 'px';
+                            }
+                        };
+
+                        if(arguments[0] == 'loaded'){
+                            //回到第一帧
+                            setTimeout(function(){
+                                document.body.scrollTop = 0;
+                                document.documentElement.scrollTop = 0;
+                            }, 10)
+
+                            that.addEvent(document.body,'mousewheel',function(e){
+                                e = e ? e : window.event;
+
+                                var st = document.body.scrollTop ? document.body.scrollTop : document.documentElement.scrollTop;
+
+                                if(!that.animated){
+                                    return
+                                }
+
+                                if(e.wheelDelta < 0){
+                                    if(that.curPage + 1 > c.target.length - 1){
+                                        return
+                                    }else{
+                                        that.curPage++;
+                                    }
+
+                                    that.animated = false;
+
+                                    that.move(c.target[that.curPage].clientHeight);
+                                    that.changeInd();
+                                }else{
+                                    var curPage = that.curPage;
+
+                                    if(that.curPage - 1 < 0){
+                                        return
+                                    }else{
+                                        that.curPage--;                                
+                                    }
+
+                                    that.animated = false;
+
+                                    that.move(-c.target[curPage].clientHeight);
+                                    that.changeInd();
+                                }
+                            });
+                        }else if(arguments[0] == 'resize'){
+                            document.documentElement.scrollTop = document.body.scrollTop = c.target[that.curPage].offsetTop;
+                        }
+                    }
+
+                    this.addEvent(window,'resize',function () {
+                        initSize('resize')
+                    });
+                    this.addEvent(window,'load',function(){
+                        initSize('loaded');
+                    });
+
+                    if(c.control){
+                        for (var i = 0; i < c.control.length; i++) {
+                            (function(i){
+                                that.addEvent(c.control[i],'click',function(){
+                                    that.playTo(i);
+                                });
+                            })(i)
+                        };
+                    }
+
+                    if(c.onchange){
+                        this.onchange = this.config.onchange;
+                    }
+                },
+                move : function(add){
+                    var st = document.body.scrollTop ? document.body.scrollTop : document.documentElement.scrollTop,
+                        _st = st + add,
+                        that = this,
+                        c = that.config,
+                        step = add / (c.duration / c.speed);
+
+                    that.timer = setInterval(function(){
+                        st = document.body.scrollTop ? document.body.scrollTop : document.documentElement.scrollTop;
+                        
+                        if(((step > 0 && st + step < _st) || (step < 0 && st + step > _st))){
+                            document.documentElement.scrollTop = document.body.scrollTop = st + step;    
+                        }else{
+                            document.documentElement.scrollTop = document.body.scrollTop = _st;
+                            clearInterval(that.timer);
+
+                            that.animated = true;
+
+                            if(that.onchange){
+                                that.onchange();
+                            }
+                        }
+                    }, c.speed)
+                },
+                changeInd : function(){
+                    var control = this.config.control;
+                    for (var i = 0; i < control.length; i++) {
+                        if(control[i].className.indexOf('current') > -1){
+                            control[i].className = control[i].className.replace(/\scurrent/,' ');
+                            break;
+                        }
+                    };
+                    control[this.curPage].className += ' current';
+                },
+                playTo : function(i){
+                    var c = this.config,
+                        of = 0,
+                        len = c.target.length;
+
+                    if(this.curPage == i || !this.animated){
+                        return
+                    }
+
+                    if(i > this.curPage){
+                        for (var j = this.curPage + 1; j <= i; j++) {
+                            of += c.target[j].clientHeight;
+                        }
+                    }else{
+                        for (var j = this.curPage; j > i; j--) {
+                            of -= c.target[j].clientHeight;
+                        }
+                    }
+
+                    this.curPage = i;
+                    this.animated = false;
+                    this.move(of);
+                    this.changeInd();
+                }
+            }
+
+            window.DomScroller = DomScroller;
+        })();
+
+        new DomScroller({
+            target : document.getElementById('Jwheel').getElementsByTagName('div'),
+            control : document.getElementById('control').getElementsByTagName('i'),
+            duration : 500,
+            onchange : function(){
+                
+            }
+        });
+    </script>
+</body>
+</html>
